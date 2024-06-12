@@ -46,7 +46,19 @@ def compute_accuracy(model, data_loader, device):
     (a number in [0, 1]) on the labeled data returned by 
     data_loader.
     """
-    pass  # FILL ME
+    accuracy = 0
+    total_samples = 0
+    model.eval() # TODO: this is already done in the main_a.py, consider removing it
+    with torch.no_grad():
+        for inputs, labels in data_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            accuracy += (predicted == labels).sum().item()
+            total_samples += labels.size(0)
+    accuracy /= total_samples
+    return accuracy
 
 
 def run_whitebox_attack(attack, data_loader, targeted, device, n_classes=4):
