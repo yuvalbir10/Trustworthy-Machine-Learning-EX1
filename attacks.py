@@ -40,7 +40,50 @@ class PGDAttack:
         performs random initialization and early stopping, depending on the 
         self.rand_init and self.early_stop flags.
         """
-        pass  # FILL ME
+        # Initialize the adversarial samples
+        adv_samples = x.clone().detach()
+        
+        # Randomly initialize if rand_init is True
+        if self.rand_init:
+            adv_samples += torch.empty_like(adv_samples).uniform_(-self.eps, self.eps)
+            adv_samples = torch.clamp(adv_samples, 0, 1)
+        
+        # Iterate for n attack iterations
+        for _ in range(self.n):
+            adv_samples.requires_grad = True
+
+            # Forward pass to get the model predictions
+            outputs = self.model(adv_samples)
+            
+            # Calculate the loss
+            
+            # Calculate the gradients
+            if targeted:
+                loss = -self.loss_func(outputs, y)
+            else:
+                loss = self.loss_func(outputs, y)
+            
+            mean_loss = torch.mean(loss)
+
+            grad = torch.autograd.grad(
+                mean_loss, adv_samples, retain_graph=False, create_graph=False
+            )[0]
+
+            # Update the adversarial samples using the gradients
+            with torch.no_grad():
+                adv_samples += self.alpha * grad.sign()
+                perturbations = torch.clamp(adv_samples - x, min=-self.eps, max=self.eps)
+                adv_samples = torch.clamp(x + perturbations, 0, 1)
+            self.model.zero_grad()
+            
+            # Check if early stopping is enabled and the attack goal is met
+            if self.early_stop and torch.all(torch.ne(torch.argmax(outputs, dim=1), y)): # TODO: Check if this is correct
+                print(f"Early stopping targeted={targeted}")
+                break
+        
+        # TODO: use assertions to ensure the adversarial images are valid images and lie within the -ball centered at their benign counterparts
+
+        return adv_samples
 
 
 class NESBBoxPGDAttack:

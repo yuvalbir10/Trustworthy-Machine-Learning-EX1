@@ -72,7 +72,31 @@ def run_whitebox_attack(attack, data_loader, targeted, device, n_classes=4):
     2- True labels in case of untargeted attacks, and target labels in
        case of targeted attacks.
     """
-    pass  # FILL ME
+    # TODO: in the 2nd return value doc, True labels are the perturbed labels or the original labels? i think it's the original labels
+    adversarial_samples = []
+    true_labels = []
+    target_labels = []
+
+    for inputs, labels in data_loader:
+        inputs = inputs.to(device)
+        if targeted:
+            rand_targeted_labels = (labels + torch.randint(1, n_classes, labels.size())) % n_classes
+            target_labels.append(rand_targeted_labels)
+            rand_targeted_labels = rand_targeted_labels.to(device)
+        else:
+            true_labels.append(labels)
+            labels = labels.to(device)
+
+        perturbed_inputs = attack.execute(inputs, rand_targeted_labels if targeted else labels, targeted)
+        adversarial_samples.append(perturbed_inputs)
+        
+    adversarial_samples = torch.cat(adversarial_samples)
+    if targeted:
+        target_labels = torch.cat(target_labels)
+    else:
+        true_labels = torch.cat(true_labels)
+
+    return adversarial_samples, (target_labels if targeted else true_labels)
 
 
 def run_blackbox_attack(attack, data_loader, targeted, device, n_classes=4):
@@ -96,7 +120,23 @@ def compute_attack_success(model, x_adv, y, batch_size, targeted, device):
     attacks. y contains the true labels in case of untargeted attacks,
     and the target labels in case of targeted attacks.
     """
-    pass  # FILL ME
+    success = 0
+    total_samples = 0
+    model.eval()
+    with torch.no_grad():
+        for i in range(0, len(x_adv), batch_size):
+            inputs = x_adv[i:i+batch_size].to(device)
+            labels = y[i:i+batch_size].to(device)
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            if targeted:
+                success += (predicted == labels).sum().item()
+            else:
+                success += (predicted != labels).sum().item()
+            total_samples += labels.size(0)
+    success /= total_samples
+    return success
+
 
 
 def binary(num):
