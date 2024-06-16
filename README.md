@@ -4,3 +4,14 @@
 ```The test accuracy of the model is: 0.8750```
 
 2. \[ X_{i+1} = \text{Project}(X_i + a \nabla_x \text{sign}(loss_f(X, Cx))) \]
+
+
+
+
+
+
+
+
+# TODO:
+- remove all prints from the code
+- fix all 'TODO's in the code

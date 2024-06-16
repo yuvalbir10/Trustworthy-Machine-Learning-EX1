@@ -49,7 +49,7 @@ class PGDAttack:
             adv_samples = torch.clamp(adv_samples, 0, 1)
         
         # Iterate for n attack iterations
-        for _ in range(self.n):
+        for iteration in range(self.n):
             adv_samples.requires_grad = True
 
             # Forward pass to get the model predictions
@@ -77,9 +77,19 @@ class PGDAttack:
             self.model.zero_grad()
             
             # Check if early stopping is enabled and the attack goal is met
-            if self.early_stop and torch.all(torch.ne(torch.argmax(outputs, dim=1), y)): # TODO: Check if this is correct
-                print(f"Early stopping targeted={targeted}")
-                break
+
+            if self.early_stop:
+                should_stop = False
+                if not targeted and torch.all(torch.ne(torch.argmax(outputs, dim=1), y)):
+                    should_stop = True
+                elif targeted and torch.all(torch.eq(torch.argmax(outputs, dim=1), y)):
+                    should_stop = True
+                
+                if should_stop:
+                    print(f"Early stopping targeted={targeted}, iteration={iteration}") # TODO: remove this print
+                    break
+            elif iteration == self.n - 1: # TODO: todel this 'if' block
+                print(f"Max iterations reached, no early stopping")
         
         # TODO: use assertions to ensure the adversarial images are valid images and lie within the -ball centered at their benign counterparts
 
