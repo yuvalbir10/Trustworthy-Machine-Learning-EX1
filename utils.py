@@ -111,7 +111,33 @@ def run_blackbox_attack(attack, data_loader, targeted, device, n_classes=4):
        case of targeted attacks.
     3- The number of queries made to create each adversarial example.
     """
-    pass  # FILL ME
+    adversarial_samples = []
+    true_labels = []
+    target_labels = []
+    num_queries = []
+
+    for inputs, labels in data_loader:
+        inputs = inputs.to(device)
+        if targeted:
+            rand_targeted_labels = (labels + torch.randint(1, n_classes, labels.size())) % n_classes
+            target_labels.append(rand_targeted_labels)
+            rand_targeted_labels = rand_targeted_labels.to(device)
+        else:
+            true_labels.append(labels)
+            labels = labels.to(device)
+
+        perturbed_inputs, queries = attack.execute(inputs, rand_targeted_labels if targeted else labels, targeted)
+        adversarial_samples.append(perturbed_inputs)
+        num_queries.append(queries)
+        
+    adversarial_samples = torch.cat(adversarial_samples)
+    num_queries = torch.cat(num_queries)
+    if targeted:
+        target_labels = torch.cat(target_labels)
+    else:
+        true_labels = torch.cat(true_labels)
+
+    return adversarial_samples, (target_labels if targeted else true_labels), num_queries
 
 
 def compute_attack_success(model, x_adv, y, batch_size, targeted, device):

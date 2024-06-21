@@ -55,16 +55,17 @@ class PGDAttack:
             # Forward pass to get the model predictions
             outputs = self.model(adv_samples)
             
-            # Calculate the loss
             
-            # Calculate the gradients
+            # Calculate the loss
             if targeted:
-                loss = -self.loss_func(outputs, y)
+                # maximize the loss for targeted attacks so it will be closer to the target (to zero loss)
+                loss = -self.loss_func(outputs, y) 
             else:
                 loss = self.loss_func(outputs, y)
             
             mean_loss = torch.mean(loss)
 
+            # Calculate the gradients
             grad = torch.autograd.grad(
                 mean_loss, adv_samples, retain_graph=False, create_graph=False
             )[0]
@@ -133,6 +134,31 @@ class NESBBoxPGDAttack:
         self.rand_init = rand_init
         self.early_stop = early_stop
         self.loss_func = nn.CrossEntropyLoss(reduction='none')
+        
+    def nes_gradient(self, x, y, targeted):
+        """Estimate the gradient using NES with antithetic sampling."""
+        batch_size = x.size(0)
+        grad_estimates = torch.zeros_like(x)
+
+        for i in range(self.k):
+            u = torch.randn_like(x)
+            u = u / u.norm(p=2, dim=tuple(range(1, u.dim())), keepdim=True)
+
+            with torch.no_grad():
+                f_plus = self.loss_func(self.model(x + self.sigma * u), y)
+                f_minus = self.loss_func(self.model(x - self.sigma * u), y)
+
+                if targeted:
+                    grad = (f_minus - f_plus).view(-1, 1, 1, 1) * u # TODO: why do we need view(-1, 1, 1, 1)?
+                else:
+                    grad = (f_plus - f_minus).view(-1, 1, 1, 1) * u
+
+                grad_estimates += grad
+
+            del u, f_plus, f_minus, grad
+
+        grad_estimates /= (2 * self.k * self.sigma)
+        return grad_estimates
 
     def execute(self, x, y, targeted=False):
         """
@@ -144,7 +170,40 @@ class NESBBoxPGDAttack:
         2- A vector with dimensionality len(x) containing the number of queries for
             each sample in x.
         """
-        pass  # FILL ME
+        x_adv = x.clone().detach()
+        if self.rand_init:
+            x_adv += torch.empty_like(x_adv).uniform_(-self.eps, self.eps)
+            x_adv = torch.clamp(x_adv, 0, 1)
+        
+        momentum = torch.zeros_like(x)
+        queries = torch.zeros(x.size(0), dtype=torch.int32)
+
+        for _ in range(self.n):
+            grad = self.nes_gradient(x_adv, y, targeted)
+
+            if self.momentum > 0:
+                momentum = self.momentum * momentum + grad
+                grad = momentum
+
+            x_adv = x_adv + self.alpha * torch.sign(grad)
+            x_adv = torch.clamp(x_adv, x - self.eps, x + self.eps)
+            x_adv = torch.clamp(x_adv, 0, 1)
+
+            queries += 2 * self.k
+
+            with torch.no_grad():
+                logits = self.model(x_adv)
+                preds = logits.argmax(dim=1)
+                if targeted:
+                    are_results_equal = (preds == y)
+                else:
+                    are_results_equal = (preds != y)
+
+            if self.early_stop and are_results_equal.all():
+                break
+            
+
+        return x_adv, queries
 
 
 class PGDEnsembleAttack:
