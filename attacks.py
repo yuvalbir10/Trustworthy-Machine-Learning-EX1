@@ -243,4 +243,59 @@ class PGDEnsembleAttack:
         attacks. The method returns the adversarially perturbed samples, which
         lie in the ranges [0, 1] and [x-eps, x+eps].
         """
-        pass  # FILL ME
+        # Initialize the adversarial samples
+        adv_samples = x.clone().detach()
+        
+        # Randomly initialize if rand_init is True
+        if self.rand_init:
+            adv_samples += torch.empty_like(adv_samples).uniform_(-self.eps, self.eps)
+            adv_samples = torch.clamp(adv_samples, 0, 1)
+        
+        # Iterate for n attack iterations
+        for iteration in range(self.n):
+            adv_samples.requires_grad = True
+
+            # Forward pass to get the model predictions
+            models_outputs = [model(adv_samples) for model in self.models]
+            
+            # Calculate the loss
+            if targeted:
+                # maximize the loss for targeted attacks so it will be closer to the target (to zero loss)
+                loss = (-1) * sum([self.loss_func(outputs, y) for outputs in models_outputs])
+            else:
+                loss = sum([self.loss_func(outputs, y) for outputs in models_outputs])
+            
+            mean_loss = torch.mean(loss)
+
+            # Calculate the gradients
+            grad = torch.autograd.grad(
+                mean_loss, adv_samples, retain_graph=False, create_graph=False
+            )[0]
+
+            # Update the adversarial samples using the gradients
+            with torch.no_grad():
+                adv_samples += self.alpha * grad.sign()
+                perturbations = torch.clamp(adv_samples - x, min=-self.eps, max=self.eps)
+                adv_samples = torch.clamp(x + perturbations, 0, 1)
+            
+            for model in self.models:
+                model.zero_grad()
+            
+            # Check if early stopping is enabled and the attack goal is met
+            if self.early_stop:
+                should_stop = False
+                if not targeted and all([torch.all(torch.ne(torch.argmax(outputs, dim=1), y)) for outputs in models_outputs]):
+                    should_stop = True
+                elif targeted and all([torch.all(torch.eq(torch.argmax(outputs, dim=1), y)) for outputs in models_outputs]):
+                    should_stop = True
+                
+                if should_stop:
+                    # print(f"Early stopping targeted={targeted}, iteration={iteration}") # TODO: remove this print
+                    break
+            elif iteration == self.n - 1: # TODO: todel this 'if' block
+                pass
+                # print(f"Max iterations reached, no early stopping")
+        
+        # TODO: use assertions to ensure the adversarial images are valid images and lie within the -ball centered at their benign counterparts
+
+        return adv_samples
