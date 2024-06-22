@@ -265,7 +265,7 @@ class PGDEnsembleAttack:
             else:
                 loss = sum([self.loss_func(outputs, y) for outputs in models_outputs])
             
-            mean_loss = torch.mean(loss)
+            mean_loss = torch.sum(loss)
 
             # Calculate the gradients
             grad = torch.autograd.grad(
@@ -281,7 +281,8 @@ class PGDEnsembleAttack:
             for model in self.models:
                 model.zero_grad()
             
-            # Check if early stopping is enabled and the attack goal is met
+            # This is not even running in main_b.py, but I implemented it anyway in the way I think it should be
+            # Check if early stopping is enabled and the attack goal is met.
             if self.early_stop:
                 should_stop = False
                 if not targeted and all([torch.all(torch.ne(torch.argmax(outputs, dim=1), y)) for outputs in models_outputs]):
@@ -290,11 +291,7 @@ class PGDEnsembleAttack:
                     should_stop = True
                 
                 if should_stop:
-                    # print(f"Early stopping targeted={targeted}, iteration={iteration}") # TODO: remove this print
                     break
-            elif iteration == self.n - 1: # TODO: todel this 'if' block
-                pass
-                # print(f"Max iterations reached, no early stopping")
         
         # TODO: use assertions to ensure the adversarial images are valid images and lie within the -ball centered at their benign counterparts
 
