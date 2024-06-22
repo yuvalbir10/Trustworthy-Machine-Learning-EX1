@@ -63,7 +63,7 @@ class PGDAttack:
             else:
                 loss = self.loss_func(outputs, y)
             
-            mean_loss = torch.mean(loss)
+            mean_loss = torch.sum(loss)
 
             # Calculate the gradients
             grad = torch.autograd.grad(
