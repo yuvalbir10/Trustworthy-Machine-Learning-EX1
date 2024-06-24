@@ -63,11 +63,11 @@ class PGDAttack:
             else:
                 loss = self.loss_func(outputs, y)
             
-            mean_loss = torch.sum(loss)
+            sum_loss = torch.sum(loss)
 
             # Calculate the gradients
             grad = torch.autograd.grad(
-                mean_loss, adv_samples, retain_graph=False, create_graph=False
+                sum_loss, adv_samples, retain_graph=False, create_graph=False
             )[0]
 
             # Update the adversarial samples using the gradients
@@ -137,7 +137,6 @@ class NESBBoxPGDAttack:
         
     def nes_gradient(self, x, y, targeted):
         """Estimate the gradient using NES with antithetic sampling."""
-        batch_size = x.size(0)
         grad_estimates = torch.zeros_like(x)
 
         for i in range(self.k):
@@ -195,11 +194,11 @@ class NESBBoxPGDAttack:
                 logits = self.model(x_adv)
                 preds = logits.argmax(dim=1)
                 if targeted:
-                    are_results_equal = (preds == y)
+                    result_success_status = torch.eq(preds, y)
                 else:
-                    are_results_equal = (preds != y)
+                    result_success_status = torch.ne(preds, y)
 
-            if self.early_stop and are_results_equal.all():
+            if self.early_stop and all(result_success_status):
                 break
             
 
@@ -265,11 +264,11 @@ class PGDEnsembleAttack:
             else:
                 loss = sum([self.loss_func(outputs, y) for outputs in models_outputs])
             
-            mean_loss = torch.sum(loss)
+            sum_loss = torch.sum(loss)
 
             # Calculate the gradients
             grad = torch.autograd.grad(
-                mean_loss, adv_samples, retain_graph=False, create_graph=False
+                sum_loss, adv_samples, retain_graph=False, create_graph=False
             )[0]
 
             # Update the adversarial samples using the gradients
