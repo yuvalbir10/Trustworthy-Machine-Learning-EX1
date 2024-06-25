@@ -187,11 +187,11 @@ class NESBBoxPGDAttack:
         for _ in range(self.n):
             grad = self.nes_gradient(x_adv, y, targeted)
 
-            if self.momentum > 0:
+            if self.momentum > 0: # TODO: check that the momentum handling is correct
                 momentum = self.momentum * momentum + grad
                 grad = momentum
 
-            x_adv = x_adv + self.alpha * torch.sign(grad)
+            x_adv = x_adv + self.alpha * torch.sign(grad) # TODO: check if that is the correct way to update using step size (alpha)
             x_adv = torch.clamp(x_adv, x - self.eps, x + self.eps)
             x_adv = torch.clamp(x_adv, 0, 1)
 
