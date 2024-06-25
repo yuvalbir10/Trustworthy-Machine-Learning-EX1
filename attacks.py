@@ -137,27 +137,34 @@ class NESBBoxPGDAttack:
         
     def nes_gradient(self, x, y, targeted):
         """Estimate the gradient using NES with antithetic sampling."""
-        grad_estimates = torch.zeros_like(x)
-
+        # Initialize the gradient
+        gradient = torch.zeros_like(x)
+        
+        # Perform antithetic sampling
         for i in range(self.k):
-            u = torch.randn_like(x)
-            u = u / u.norm(p=2, dim=tuple(range(1, u.dim())), keepdim=True)
-
+            # Sample delta_i from N(0, I)
+            # TODO: check if this really yields delta_i from N(0, I)
+            delta = torch.randn_like(x)
+            theta_pos = x + self.sigma * delta
+            theta_neg = x - self.sigma * delta
+            
             with torch.no_grad():
-                f_plus = self.loss_func(self.model(x + self.sigma * u), y)
-                f_minus = self.loss_func(self.model(x - self.sigma * u), y)
-
+                # Calculate the loss at theta_pos and theta_neg
+                loss_pos = self.loss_func(self.model(theta_pos), y)
+                loss_neg = self.loss_func(self.model(theta_neg), y)
+                
+                # Calculate the gradient estimate
                 if targeted:
-                    grad = (f_minus - f_plus).view(-1, 1, 1, 1) * u # TODO: why do we need view(-1, 1, 1, 1)?
+                    loss_diff = loss_neg - loss_pos
                 else:
-                    grad = (f_plus - f_minus).view(-1, 1, 1, 1) * u
-
-                grad_estimates += grad
-
-            del u, f_plus, f_minus, grad
-
-        grad_estimates /= (2 * self.k * self.sigma)
-        return grad_estimates
+                    loss_diff = loss_pos - loss_neg
+                
+                gradient += loss_diff.view(-1, *[1] * (x.dim() - 1)) * delta
+        
+        # Return the averaged gradient
+        gradient /= (2 * self.k * self.sigma)
+        
+        return gradient
 
     def execute(self, x, y, targeted=False):
         """
