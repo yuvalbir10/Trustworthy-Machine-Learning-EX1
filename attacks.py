@@ -87,11 +87,8 @@ class PGDAttack:
                     should_stop = True
                 
                 if should_stop:
-                    print(f"Early stopping targeted={targeted}, iteration={iteration}") # TODO: remove this print
                     break
-            elif iteration == self.n - 1: # TODO: todel this 'if' block
-                print(f"Max iterations reached, no early stopping")
-        
+                
         # TODO: use assertions to ensure the adversarial images are valid images and lie within the -ball centered at their benign counterparts
 
         return adv_samples
