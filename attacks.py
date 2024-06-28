@@ -176,40 +176,60 @@ class NESBBoxPGDAttack:
         2- A vector with dimensionality len(x) containing the number of queries for
             each sample in x.
         """
+        cloned_y = y.clone().detach()
         x_adv = x.clone().detach()
+        origin_indexes = torch.arange(x.size(0)).to(x.device)
+
         if self.rand_init:
             x_adv += torch.empty_like(x_adv).uniform_(-self.eps, self.eps)
             x_adv = torch.clamp(x_adv, 0, 1)
         
         momentum = torch.zeros_like(x)
-        queries = torch.zeros(x.size(0), dtype=torch.int32)
+        queries = torch.zeros(x.size(0), dtype=torch.int32).to(x.device)
+        successful_adv_samples = torch.zeros_like(x_adv)
 
         for _ in range(self.n):
-            grad = self.nes_gradient(x_adv, y, targeted)
+            grad = self.nes_gradient(x_adv, cloned_y, targeted)
 
             if self.momentum > 0: # TODO: check that the momentum handling is correct
                 momentum = self.momentum * momentum + grad
                 grad = momentum
 
             x_adv = x_adv + self.alpha * torch.sign(grad) # TODO: check if that is the correct way to update using step size (alpha)
-            x_adv = torch.clamp(x_adv, x - self.eps, x + self.eps)
-            x_adv = torch.clamp(x_adv, 0, 1)
 
-            queries += 2 * self.k
+
+            for i in range(x_adv.size(0)):
+                x_adv[i] = torch.clamp(x_adv[i], x[origin_indexes[i]] - self.eps, x[origin_indexes[i]] + self.eps)
+                x_adv[i] = torch.clamp(x_adv[i], 0, 1)
+                # assert torch.all(torch.abs(x_adv[i] - x[origin_indexes[i]]) <= self.eps), "Adversarial sample is not within the epsilon-ball of the original sample"
+
+            queries[origin_indexes] += 2 * self.k
 
             with torch.no_grad():
                 logits = self.model(x_adv)
                 preds = logits.argmax(dim=1)
                 if targeted:
-                    result_success_status = torch.eq(preds, y)
+                    result_success_status = torch.eq(preds, cloned_y)
                 else:
-                    result_success_status = torch.ne(preds, y)
+                    result_success_status = torch.ne(preds, cloned_y)
 
-            if self.early_stop and all(result_success_status):
-                break
+            if self.early_stop:
+                to_set_indexes = origin_indexes[result_success_status]
+                successful_adv_samples[to_set_indexes] = x_adv[result_success_status]
+                x_adv = x_adv[~result_success_status]
+                origin_indexes = origin_indexes[~result_success_status]
+                cloned_y = cloned_y[~result_success_status]
+                momentum = momentum[~result_success_status]
+                if x_adv.size(0) == 0:
+                    break
             
+        # add the indexes that did not early_stop
+        successful_adv_samples[origin_indexes] = x_adv
 
-        return x_adv, queries
+        # for i in range(x_adv.size(0)):
+            # assert torch.all(torch.abs(successful_adv_samples[i] - x[i]) <= self.eps), "Successful adversarial sample is not within the epsilon-ball of the original sample"
+
+        return successful_adv_samples, queries
 
 
 class PGDEnsembleAttack:
