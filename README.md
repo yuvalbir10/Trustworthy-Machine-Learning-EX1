@@ -28,18 +28,35 @@ White-box attack:
 ```
 
 3. We will use the NES method to estimate gradients in a black-box setting. This involves $2*k$ perturbations ($k$ samples that each will be taken on both positive and negative pertubation around the original image). In the referenced paper it is called Antithetic sampling which is described as more efficient and accurate gradient estimation. with the changes in the output we can estimate the direction of the gradient.
+In addition, we will use the 
 
 
 
-1. As described in the lecture, for each input we will estimate the gradients using R s.t
+As described in the lecture, for each input we will estimate the gradients using R s.t
 we will take \[
   R \sim \mathcal{N}(\mu,\,\sigma^{2})\,.
 \] 
 ![alt text](image.png)
 
-TODO: the excute function currently gets batch of images but does not do anything with the batching. maybe i need to run it for each image in the batch seperately
 
-so that we will have the estimated derivative as the average incline.
+Compute the gradient of the loss function 
+J(𝑥) with respect to the input x
+\[
+\nabla_x J(x) = \frac{\partial J(x)}{\partial x}
+\]
+Update the momentum term:
+\[
+m = \mu \cdot m + \frac{\nabla_x J(x)}{\|\nabla_x J(x)\|_1}
+\]
+
+where \(\mu\) is the momentum parameter, and \(\|\nabla_x J(x)\|_1\) is the L1 norm of the gradient.
+
+Then we add the momentum-scaled gradient to the perturbation:
+\[
+\eta = \eta + \alpha \cdot \text{sign}(m)
+\]
+where \(\alpha\) is the step size.
+
 
 # Q2
 In this question I implemented a transfer attack using the deravative of the mean of all models.
