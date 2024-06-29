@@ -134,8 +134,7 @@ class NESBBoxPGDAttack:
         
         # Perform antithetic sampling
         for i in range(self.k):
-            # Sample delta_i from N(0, I)
-            # TODO: check if this really yields delta_i from N(0, I)
+            # Sample delta_i from N(0, I) and then use self.sigma as std
             delta = torch.randn_like(x)
             theta_pos = x + self.sigma * delta
             theta_neg = x - self.sigma * delta
