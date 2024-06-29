@@ -73,6 +73,7 @@ def run_whitebox_attack(attack, data_loader, targeted, device, n_classes=4):
        case of targeted attacks.
     """
     adversarial_samples = []
+    original_images = []
     # the original labels for untargeted attacks
     true_labels = []
     # the target desired labels for targeted attacks
@@ -80,6 +81,7 @@ def run_whitebox_attack(attack, data_loader, targeted, device, n_classes=4):
 
     for inputs, labels in data_loader:
         inputs = inputs.to(device)
+        original_images.append(inputs)
         if targeted:
             rand_targeted_labels = (labels + torch.randint(1, n_classes, labels.size())) % n_classes
             target_labels.append(rand_targeted_labels)
@@ -96,6 +98,11 @@ def run_whitebox_attack(attack, data_loader, targeted, device, n_classes=4):
         target_labels = torch.cat(target_labels)
     else:
         true_labels = torch.cat(true_labels)
+
+    original_images = torch.cat(original_images)
+
+    assert torch.all((adversarial_samples >= 0) & (adversarial_samples <= 1)), "adversarial_samples are not within the range of 0 to 1"
+    assert torch.all(adversarial_samples >= original_images - attack.eps) and torch.all(adversarial_samples <= original_images + attack.eps), "Adversarial samples are not within the epsilon-ball of the original samples"
 
     return adversarial_samples, (target_labels if targeted else true_labels)
 
@@ -116,9 +123,11 @@ def run_blackbox_attack(attack, data_loader, targeted, device, n_classes=4):
     true_labels = []
     target_labels = []
     num_queries = []
+    original_images = []
 
     for inputs, labels in data_loader:
         inputs = inputs.to(device)
+        original_images.append(inputs)
         if targeted:
             rand_targeted_labels = (labels + torch.randint(1, n_classes, labels.size())) % n_classes
             target_labels.append(rand_targeted_labels)
@@ -133,10 +142,15 @@ def run_blackbox_attack(attack, data_loader, targeted, device, n_classes=4):
         
     adversarial_samples = torch.cat(adversarial_samples)
     num_queries = torch.cat(num_queries)
+    original_images = torch.cat(original_images)
+
     if targeted:
         target_labels = torch.cat(target_labels)
     else:
         true_labels = torch.cat(true_labels)
+
+    assert torch.all((adversarial_samples >= 0) & (adversarial_samples <= 1)), "adversarial_samples are not within the range of 0 to 1"
+    assert torch.all(adversarial_samples >= original_images - attack.eps) and torch.all(adversarial_samples <= original_images + attack.eps), "Adversarial samples are not within the epsilon-ball of the original samples"
 
     return adversarial_samples, (target_labels if targeted else true_labels), num_queries
 

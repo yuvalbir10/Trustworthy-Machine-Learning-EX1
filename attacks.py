@@ -55,7 +55,6 @@ class PGDAttack:
             # Forward pass to get the model predictions
             outputs = self.model(adv_samples)
             
-            
             # Calculate the loss
             if targeted:
                 # maximize the loss for targeted attacks so it will be closer to the target (to zero loss)
@@ -77,8 +76,6 @@ class PGDAttack:
                 adv_samples = torch.clamp(x + perturbations, 0, 1)
             self.model.zero_grad()
             
-            # Check if early stopping is enabled and the attack goal is met
-
             if self.early_stop:
                 should_stop = False
                 if not targeted and torch.all(torch.ne(torch.argmax(outputs, dim=1), y)):
@@ -88,8 +85,6 @@ class PGDAttack:
                 
                 if should_stop:
                     break
-                
-        # TODO: use assertions to ensure the adversarial images are valid images and lie within the -ball centered at their benign counterparts
 
         return adv_samples
 
