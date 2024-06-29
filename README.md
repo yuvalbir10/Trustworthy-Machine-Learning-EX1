@@ -19,7 +19,7 @@ for targeted case we will consider loss as ```loss = -self.loss_func(outputs, y)
 
 for untargeted case we will consider loss as ```loss = self.loss_func(outputs, y)```, so minimizing the 'loss' later will maximize the ```self.loss_func(outputs, y)``` so that we will get further from the original true class.
 
-to optimise the running time, i ran the attack on the whole batch of images and not on each image seperately by taking gradient of the sum of the losses (over the whole batch). This it legal because the the images in 16-image ```adv_samples``` batch are independent of each other (in context of the gradient calculation).
+to optimise the running time, i ran the attack on the whole batch of images and not on each image seperately by taking gradient of the sum of the losses (over the whole batch). We need to take the sum (and not the average) because the the images in 16-image ```adv_samples``` batch are independent of each other (in context of the gradient calculation).
 
 ```
 White-box attack:
@@ -27,10 +27,10 @@ White-box attack:
         - targeted success rate: 0.9450
 ```
 
-3. TODO
+3. We will use the NES method to estimate gradients in a black-box setting. This involves $2*k$ perturbations ($k$ samples that each will be taken on both positive and negative pertubation around the original image). In the referenced paper it is called Antithetic sampling which is described as more efficient and accurate gradient estimation. with the changes in the output we can estimate the direction of the gradient.
 
 
-# Q2
+
 1. As described in the lecture, for each input we will estimate the gradients using R s.t
 we will take \[
   R \sim \mathcal{N}(\mu,\,\sigma^{2})\,.
@@ -40,6 +40,11 @@ we will take \[
 TODO: the excute function currently gets batch of images but does not do anything with the batching. maybe i need to run it for each image in the batch seperately
 
 so that we will have the estimated derivative as the average incline.
+
+# Q2
+In this question I implemented a transfer attack using the deravative of the mean of all models.
+There were many techniches both in class and in the referenced paper on how to combine the gradients of the models. I chose a version of the mean of the gradients of the models which is similar to the idea in the paper.
+
 
 
 
