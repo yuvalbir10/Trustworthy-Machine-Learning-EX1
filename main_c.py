@@ -14,8 +14,8 @@ def flip_bit(float_num, index):
     float_bytes = struct.pack('f', float_num)
     float_int = struct.unpack('I', float_bytes)[0]
 
-    # Flip the i-th bit
-    flipped_int = float_int ^ (1 << index)
+    # Flip the i-th bit (index 0 is the most significant bit)
+    flipped_int = float_int ^ (1 << (31 - index))
 
     # Convert back to float
     flipped_bytes = struct.pack('I', flipped_int)
