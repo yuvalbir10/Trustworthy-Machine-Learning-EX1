@@ -215,9 +215,6 @@ class NESBBoxPGDAttack:
         # add the indexes that did not early_stop
         successful_adv_samples[origin_indexes] = x_adv
 
-        # for i in range(x_adv.size(0)):
-            # assert torch.all(torch.abs(successful_adv_samples[i] - x[i]) <= self.eps), "Successful adversarial sample is not within the epsilon-ball of the original sample"
-
         return successful_adv_samples, queries
 
 
