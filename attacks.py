@@ -189,8 +189,8 @@ class NESBBoxPGDAttack:
 
             x_adv = x_adv + self.alpha * torch.sign(grad) # TODO: check if that is the correct way to update using step size (alpha)
 
-            perturbations = torch.clamp(x_adv - x, min=-self.eps, max=self.eps)
-            x_adv = torch.clamp(x + perturbations, 0, 1)
+            perturbations = torch.clamp(x_adv - x[origin_indexes], min=-self.eps, max=self.eps)
+            x_adv = torch.clamp(x[origin_indexes] + perturbations, 0, 1)
 
             queries[origin_indexes] += 2 * self.k
 
