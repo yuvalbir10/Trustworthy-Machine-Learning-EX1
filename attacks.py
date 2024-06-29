@@ -189,11 +189,8 @@ class NESBBoxPGDAttack:
 
             x_adv = x_adv + self.alpha * torch.sign(grad) # TODO: check if that is the correct way to update using step size (alpha)
 
-
-            for i in range(x_adv.size(0)):
-                x_adv[i] = torch.clamp(x_adv[i], x[origin_indexes[i]] - self.eps, x[origin_indexes[i]] + self.eps)
-                x_adv[i] = torch.clamp(x_adv[i], 0, 1)
-                # assert torch.all(torch.abs(x_adv[i] - x[origin_indexes[i]]) <= self.eps), "Adversarial sample is not within the epsilon-ball of the original sample"
+            perturbations = torch.clamp(x_adv - x, min=-self.eps, max=self.eps)
+            x_adv = torch.clamp(x + perturbations, 0, 1)
 
             queries[origin_indexes] += 2 * self.k
 
