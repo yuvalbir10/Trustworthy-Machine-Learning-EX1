@@ -183,7 +183,7 @@ class NESBBoxPGDAttack:
             grad = self.nes_gradient(x_adv, cloned_y, targeted)
 
             if self.momentum > 0: # TODO: check that the momentum handling is correct
-                momentum = self.momentum * momentum + grad
+                momentum = self.momentum * momentum + (grad / torch.norm(grad, p=1))
                 grad = momentum
 
             x_adv = x_adv + self.alpha * torch.sign(grad) # TODO: check if that is the correct way to update using step size (alpha)
