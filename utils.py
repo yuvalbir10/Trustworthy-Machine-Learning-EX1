@@ -72,9 +72,10 @@ def run_whitebox_attack(attack, data_loader, targeted, device, n_classes=4):
     2- True labels in case of untargeted attacks, and target labels in
        case of targeted attacks.
     """
-    # TODO: in the 2nd return value doc, True labels are the perturbed labels or the original labels? i think it's the original labels
     adversarial_samples = []
+    # the original labels for untargeted attacks
     true_labels = []
+    # the target desired labels for targeted attacks
     target_labels = []
 
     for inputs, labels in data_loader:
