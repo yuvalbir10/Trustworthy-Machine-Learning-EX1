@@ -145,7 +145,7 @@ class NESBBoxPGDAttack:
                 loss_pos = self.loss_func(self.model(theta_pos), y)
                 loss_neg = self.loss_func(self.model(theta_neg), y)
                 
-                # Calculate the gradient estimate
+                # Calculate the gradient estimate. just as the other attacks, we multiply by -1 for targeted attacks to make the loss closer to zero later on.
                 if targeted:
                     loss_diff = loss_neg - loss_pos
                 else:
