@@ -42,6 +42,9 @@ class PGDAttack:
         """
         # Initialize the adversarial samples
         adv_samples = x.clone().detach()
+        final_adv_samples = torch.zeros_like(adv_samples)
+        origin_indexes = torch.arange(x.size(0)).to(x.device)
+        cloned_y = y.clone().detach()
         
         # Randomly initialize if rand_init is True
         if self.rand_init:
@@ -49,7 +52,7 @@ class PGDAttack:
             adv_samples = torch.clamp(adv_samples, 0, 1)
         
         # Iterate for n attack iterations
-        for iteration in range(self.n):
+        for _ in range(self.n):
             adv_samples.requires_grad = True
 
             # Forward pass to get the model predictions
@@ -58,9 +61,9 @@ class PGDAttack:
             # Calculate the loss
             if targeted:
                 # maximize the loss for targeted attacks so it will be closer to the target (to zero loss)
-                loss = -self.loss_func(outputs, y) 
+                loss = -self.loss_func(outputs, cloned_y) 
             else:
-                loss = self.loss_func(outputs, y)
+                loss = self.loss_func(outputs, cloned_y)
             
             sum_loss = torch.sum(loss)
 
@@ -72,21 +75,29 @@ class PGDAttack:
             # Update the adversarial samples using the gradients
             with torch.no_grad():
                 adv_samples += self.alpha * grad.sign()
-                perturbations = torch.clamp(adv_samples - x, min=-self.eps, max=self.eps)
-                adv_samples = torch.clamp(x + perturbations, 0, 1)
+                perturbations = torch.clamp(adv_samples - x[origin_indexes], min=-self.eps, max=self.eps)
+                adv_samples = torch.clamp(x[origin_indexes] + perturbations, 0, 1)
             self.model.zero_grad()
             
             if self.early_stop:
-                should_stop = False
-                if not targeted and torch.all(torch.ne(torch.argmax(outputs, dim=1), y)):
-                    should_stop = True
-                elif targeted and torch.all(torch.eq(torch.argmax(outputs, dim=1), y)):
-                    should_stop = True
-                
-                if should_stop:
+                preds = outputs.argmax(dim=1)
+                if targeted:
+                    result_success_status = torch.eq(preds, cloned_y)
+                else:
+                    result_success_status = torch.ne(preds, cloned_y)
+
+                to_set_indexes = origin_indexes[result_success_status]
+                final_adv_samples[to_set_indexes] = adv_samples[result_success_status]
+                adv_samples = adv_samples[~result_success_status]
+                origin_indexes = origin_indexes[~result_success_status]
+                cloned_y = cloned_y[~result_success_status]
+                if adv_samples.size(0) == 0:
                     break
 
-        return adv_samples
+                
+        final_adv_samples[origin_indexes] = adv_samples
+        
+        return final_adv_samples
 
 
 class NESBBoxPGDAttack:
