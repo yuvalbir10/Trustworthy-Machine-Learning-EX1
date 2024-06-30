@@ -283,9 +283,9 @@ class PGDEnsembleAttack:
             # Calculate the loss
             if targeted:
                 # maximize the mean_loss var for targeted attacks so the models' avg loss will be closer to the target (to zero loss, because i multiplied by -1)
-                mean_loss = (-1) * torch.mean(torch.stack([self.loss_func(outputs, y) for outputs in models_outputs]))
+                mean_loss = (-1) * torch.sum(torch.stack([self.loss_func(outputs, y) for outputs in models_outputs]))
             else:
-                mean_loss = torch.mean(torch.stack([self.loss_func(outputs, y) for outputs in models_outputs]))
+                mean_loss = torch.sum(torch.stack([self.loss_func(outputs, y) for outputs in models_outputs]))
             
             # Calculate the gradients
             grad = torch.autograd.grad(
@@ -302,6 +302,7 @@ class PGDEnsembleAttack:
                 model.zero_grad()
             
             # This is not even running in main_b.py, but I implemented it anyway in the way I think it should be
+            # This can even be optimized by checking for each sameple seperately (like in my Q1 implementations), but it does not run so I did not bother.
             # Check if early stopping is enabled and the attack goal is met.
             if self.early_stop:
                 should_stop = False
@@ -313,6 +314,4 @@ class PGDEnsembleAttack:
                 if should_stop:
                     break
         
-        # TODO: use assertions to ensure the adversarial images are valid images and lie within the -ball centered at their benign counterparts
-
         return adv_samples
