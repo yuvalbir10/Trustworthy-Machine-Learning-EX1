@@ -188,16 +188,16 @@ class NESBBoxPGDAttack:
         
         momentum = torch.zeros_like(x)
         queries = torch.zeros(x.size(0), dtype=torch.int32).to(x.device)
-        successful_adv_samples = torch.zeros_like(x_adv)
+        final_adv_samples = torch.zeros_like(x_adv)
 
         for _ in range(self.n):
             grad = self.nes_gradient(x_adv, cloned_y, targeted)
 
-            if self.momentum > 0: # TODO: check that the momentum handling is correct
+            if self.momentum > 0:
                 momentum = self.momentum * momentum + (grad / torch.norm(grad, p=1))
                 grad = momentum
 
-            x_adv = x_adv + self.alpha * torch.sign(grad) # TODO: check if that is the correct way to update using step size (alpha)
+            x_adv = x_adv + self.alpha * torch.sign(grad)
 
             perturbations = torch.clamp(x_adv - x[origin_indexes], min=-self.eps, max=self.eps)
             x_adv = torch.clamp(x[origin_indexes] + perturbations, 0, 1)
@@ -214,7 +214,7 @@ class NESBBoxPGDAttack:
 
             if self.early_stop:
                 to_set_indexes = origin_indexes[result_success_status]
-                successful_adv_samples[to_set_indexes] = x_adv[result_success_status]
+                final_adv_samples[to_set_indexes] = x_adv[result_success_status]
                 x_adv = x_adv[~result_success_status]
                 origin_indexes = origin_indexes[~result_success_status]
                 cloned_y = cloned_y[~result_success_status]
@@ -223,9 +223,9 @@ class NESBBoxPGDAttack:
                     break
             
         # add the indexes that did not early_stop
-        successful_adv_samples[origin_indexes] = x_adv
+        final_adv_samples[origin_indexes] = x_adv
 
-        return successful_adv_samples, queries
+        return final_adv_samples, queries
 
 
 class PGDEnsembleAttack:
