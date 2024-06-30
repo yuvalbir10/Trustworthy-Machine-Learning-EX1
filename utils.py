@@ -6,6 +6,7 @@ import models
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
+import random
 
 
 def load_pretrained_cnn(cnn_id, n_classes=4, models_dir='trained-models/'):
@@ -48,7 +49,7 @@ def compute_accuracy(model, data_loader, device):
     """
     accuracy = 0
     total_samples = 0
-    model.eval() # TODO: this is already done in the main_a.py, consider removing it
+    model.eval()
     with torch.no_grad():
         for inputs, labels in data_loader:
             inputs = inputs.to(device)
@@ -186,17 +187,22 @@ def binary(num):
     binary representation (in big-endian, where the string only
     contains '0' and '1' characters).
     """
-    pass  # FILL ME
+    bytes_rep = struct.pack('>f', num)
+    int_rep = int.from_bytes(bytes_rep, 'big')
+    binary_rep = format(int_rep, '032b')
+    return binary_rep
 
-
-def float32(binary):
+def float32(binary_str):
     """
     This function inverts the "binary" function above. I.e., it converts 
     binary representations of float32 numbers into float32 and returns the
     result.
     """
-    pass  # FILL ME
-
+    int_rep = int(binary_str, 2)
+    bytes_rep = int_rep.to_bytes(4, 'big')
+    # Convert bytes to float32
+    float_rep = struct.unpack('>f', bytes_rep)[0]
+    return float_rep
 
 def random_bit_flip(w):
     """
@@ -205,4 +211,9 @@ def random_bit_flip(w):
     1- The weight with the bit flipped
     2- The index of the flipped bit in {0, 1, ..., 31}
     """
-    pass  # FILL ME
+    bin_rep = binary(w)
+    bit_index = random.randint(0, 31)
+    # Flip the chosen random bit
+    flipped_bin_rep = bin_rep[:bit_index] + ('1' if bin_rep[bit_index] == '0' else '0') + bin_rep[bit_index+1:]
+    flipped_w = float32(flipped_bin_rep)
+    return flipped_w, bit_index

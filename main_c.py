@@ -7,21 +7,6 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import struct
-
-def flip_bit(float_num, index):
-    # Convert float to its 32-bit representation
-    float_bytes = struct.pack('f', float_num)
-    float_int = struct.unpack('I', float_bytes)[0]
-
-    # Flip the i-th bit (index 0 is the most significant bit)
-    flipped_int = float_int ^ (1 << (31 - index))
-
-    # Convert back to float
-    flipped_bytes = struct.pack('I', flipped_int)
-    flipped_float = struct.unpack('f', flipped_bytes)[0]
-
-    return flipped_float
 
 sns.set_theme()
 
@@ -62,11 +47,8 @@ for layer_name in layers:
             weight_idx = random.randint(0, len(W.view(-1)) - 1)
             weight = W.view(-1)[weight_idx].item()
 
-            # randomly pick a bit to flip
-            bit_idx = random.randint(0, 31)
-
             # update the weight with the flipped bit
-            W.view(-1)[weight_idx] = flip_bit(weight, bit_idx)
+            W.view(-1)[weight_idx], bit_idx = utils.random_bit_flip(weight)
 
             acc_bf = utils.compute_accuracy(model, data_loader, device)
 
