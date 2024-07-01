@@ -282,14 +282,14 @@ class PGDEnsembleAttack:
             
             # Calculate the loss
             if targeted:
-                # maximize the mean_loss var for targeted attacks so the models' avg loss will be closer to the target (to zero loss, because i multiplied by -1)
-                mean_loss = (-1) * torch.sum(torch.stack([self.loss_func(outputs, y) for outputs in models_outputs]))
+                # maximize the sum_loss var for targeted attacks so the models' sum loss will be closer to the target (to zero loss, because i multiplied by -1)
+                sum_loss = (-1) * torch.sum(torch.stack([self.loss_func(outputs, y) for outputs in models_outputs]))
             else:
-                mean_loss = torch.sum(torch.stack([self.loss_func(outputs, y) for outputs in models_outputs]))
+                sum_loss = torch.sum(torch.stack([self.loss_func(outputs, y) for outputs in models_outputs]))
             
             # Calculate the gradients
             grad = torch.autograd.grad(
-                mean_loss, adv_samples, retain_graph=False, create_graph=False
+                sum_loss, adv_samples, retain_graph=False, create_graph=False
             )[0]
 
             # Update the adversarial samples using the gradients
